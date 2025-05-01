@@ -1,0 +1,7 @@
+streamlit==1.44.1
+yfinance
+requests
+pandas
+matplotlib
+schedule
+beautifulsoup4
