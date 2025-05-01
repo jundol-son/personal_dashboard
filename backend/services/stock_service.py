@@ -2,18 +2,23 @@ from sqlalchemy import text
 from db import engine
 
 def create_table():
-    query = """
-    CREATE TABLE IF NOT EXISTS favorite_stocks (
-        id SERIAL PRIMARY KEY,
-        stock_name TEXT NOT NULL,
-        ticker_code TEXT NOT NULL,
-        created_at TIMESTAMP DEFAULT now()
-    );
-    """
+    dbname = ""
     with engine.begin() as conn:
-        conn.execute(text(query))
-        dbname = conn.execute(text(query)).scalar()
-        print("🎯 현재 연결된 DB 이름:", dbname)
+        # 현재 연결된 DB 이름 확인 (선택)
+        dbname = conn.execute(text("SELECT current_database()")).scalar()
+        print("📡 연결된 DB:", dbname)
+
+        # 테이블 생성 실행 (결과 반환 없음)
+        conn.execute(text("""
+        CREATE TABLE IF NOT EXISTS favorite_stocks (
+            id SERIAL PRIMARY KEY,
+            stock_name TEXT NOT NULL,
+            ticker_code TEXT NOT NULL,
+            created_at TIMESTAMP DEFAULT now()
+        );
+        """))
+
+    print("✅ 테이블 생성 완료 (DB:", dbname, ")")
 
 def add_favorite(stock_name: str, ticker_code: str):
     query = """
