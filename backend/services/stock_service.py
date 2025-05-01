@@ -18,8 +18,12 @@ def add_favorite(stock_name: str, ticker_code: str):
     INSERT INTO favorite_stocks (stock_name, ticker_code)
     VALUES (:stock_name, :ticker_code)
     """
-    with engine.connect() as conn:
-        conn.execute(text(query), {"stock_name": stock_name, "ticker_code": ticker_code})
+    try:
+        with engine.connect() as conn:
+            conn.execute(text(query), {"stock_name": stock_name, "ticker_code": ticker_code})
+    except Exception as e:
+        print("❌ 삽입 오류:", e)
+        raise
 
 def get_favorites():
     with engine.connect() as conn:
