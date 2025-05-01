@@ -5,3 +5,4 @@ pandas
 matplotlib
 schedule
 beautifulsoup4
+finance-datareader
