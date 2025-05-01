@@ -39,7 +39,7 @@ def add_favorite(stock_name: str, ticker_code: str):
 def get_favorites():
     with engine.connect() as conn:
         result = conn.execute(text("SELECT id, stock_name, ticker_code FROM favorite_stocks ORDER BY id DESC"))
-        return [dict(row) for row in result]
+        return [dict(row) for row in result.mappings()]
 
 def delete_favorite(id: int):
     with engine.connect() as conn:
