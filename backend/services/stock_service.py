@@ -10,8 +10,10 @@ def create_table():
         created_at TIMESTAMP DEFAULT now()
     );
     """
-    with engine.connect() as conn:
+    with engine.begin() as conn:
         conn.execute(text(query))
+        dbname = conn.execute(text(query)).scalar()
+        print("🎯 현재 연결된 DB 이름:", dbname)
 
 def add_favorite(stock_name: str, ticker_code: str):
     query = """
