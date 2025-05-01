@@ -26,10 +26,14 @@ def add_favorite(stock_name: str, ticker_code: str):
     VALUES (:stock_name, :ticker_code)
     """
     try:
-        with engine.connect() as conn:
-            conn.execute(text(query), {"stock_name": stock_name, "ticker_code": ticker_code})
+        with engine.begin() as conn:  # ✅ begin()으로 수정
+            conn.execute(text(query), {
+                "stock_name": stock_name,
+                "ticker_code": ticker_code
+            })
+        print(f"✅ DB에 저장 완료: {stock_name} ({ticker_code})")
     except Exception as e:
-        print("❌ 삽입 오류:", e)
+        print("❌ 저장 실패:", e)
         raise
 
 def get_favorites():
