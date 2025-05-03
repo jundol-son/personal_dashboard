@@ -1,26 +1,30 @@
 import streamlit as st
 import requests
+import json
+from backend.kakao_auth import load_access_token
 
-st.set_page_config(page_title="카카오톡 메시지", layout="wide")
-st.title("💬 카카오톡 메시지 전송")
+st.set_page_config(page_title="카카오톡 메시지", layout="centered")
+st.title("📨 카카오톡 나에게 메시지 보내기")
 
-access_token = st.text_input("🔑 액세스 토큰 입력", type="password")
-message = st.text_area("📨 보낼 메시지 내용", "안녕하세요! 대시보드에서 보냅니다.")
-
-if st.button("📤 카카오톡 보내기"):
-    url = "https://kapi.kakao.com/v2/api/talk/memo/default/send"
-    headers = {"Authorization": f"Bearer {access_token}"}
-    data = {
-        "template_object": {
+access_token = load_access_token()
+if not access_token:
+    st.warning("❗ Access Token이 없습니다. FastAPI /callback을 통해 로그인해 주세요.")
+else:
+    msg = st.text_area("보낼 메시지", "안녕하세요, 자동화 테스트입니다!")
+    if st.button("📤 보내기"):
+        url = "https://kapi.kakao.com/v2/api/talk/memo/default/send"
+        headers = {"Authorization": f"Bearer {access_token}"}
+        data = {
             "object_type": "text",
-            "text": message,
-            "link": {"web_url": "http://localhost", "mobile_web_url": "http://localhost"},
+            "text": msg,
+            "link": {
+                "web_url": "https://developers.kakao.com",
+                "mobile_web_url": "https://developers.kakao.com"
+            },
+            "button_title": "카카오 개발자"
         }
-    }
-
-    response = requests.post(url, headers=headers, json=data)
-
-    if response.status_code == 200:
-        st.success("메시지 전송 성공 ✅")
-    else:
-        st.error(f"전송 실패 ❌ : {response.json()}")
+        res = requests.post(url, headers=headers, data={"template_object": json.dumps(data)})
+        if res.status_code == 200:
+            st.success("✅ 전송 성공")
+        else:
+            st.error(f"❌ 실패: {res.text}")
