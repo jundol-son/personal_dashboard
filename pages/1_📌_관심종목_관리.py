@@ -1,64 +1,58 @@
 import streamlit as st
 import requests
-import FinanceDataReader as fdr
-from yahooquery import Ticker
-from datetime import date, timedelta
+import pandas as pd
+from datetime import date
 
-st.set_page_config(page_title="관심 종목 관리", layout="wide")
-st.title("📌 관심 종목 관리 및 주가 조회")
+st.set_page_config(page_title="📊 KRX & 금리 대시보드", layout="wide")
+st.title("📊 한국은행 Open API 기반 - 경제 지표 대시보드")
 
-FASTAPI_URL = "https://fastapi-backend-io09.onrender.com"  # ← 본인 주소로 교체
+API_KEY = st.secrets["BOK_API_KEY"]  # 🔐 secrets.toml 또는 .env
+base_url = "https://ecos.bok.or.kr/api"
 
-# 종목 리스트 캐시
-@st.cache_data
-def load_krx():
-    df = fdr.StockListing("KRX")[["Name", "Code"]]
-    return df
+today = date.today().strftime("%Y%m%d")
 
-krx_df = load_krx()
+# 공통 API 요청 함수
+def fetch_bok_api(url):
+    try:
+        res = requests.get(url)
+        data = res.json()
+        rows = data.get("StatisticSearch", {}).get("row", [])
+        return pd.DataFrame(rows)
+    except Exception as e:
+        st.error(f"❌ API 요청 실패: {e}")
+        return pd.DataFrame()
 
-# 🔍 종목 검색
-keyword = st.text_input("🔍 종목명으로 검색", "삼성전자")
-matched = krx_df[krx_df["Name"].str.contains(keyword)]
+# 주요 환율 (통계코드: 731Y001)
+st.subheader("💱 주요국 환율")
+url_fx = f"{base_url}/StatisticSearch/{API_KEY}/json/kr/1/20/731Y001/D/{today}/{today}/0000001,0000002,0000003"
+df_fx = fetch_bok_api(url_fx)
+if not df_fx.empty:
+    df_fx = df_fx[["ITEM_NAME1", "DATA_VALUE"]]
+    df_fx.columns = ["통화", "환율 (원)"]
+    st.table(df_fx)
 
-if not matched.empty:
-    selected = matched.iloc[0]
-    st.markdown(f"**🔎 선택:** {selected['Name']} ({selected['Code']})")
+# KOSPI / KOSDAQ (통계코드: 802Y001)
+st.subheader("📈 KOSPI / KOSDAQ")
+url_idx = f"{base_url}/StatisticSearch/{API_KEY}/json/kr/1/20/802Y001/D/{today}/{today}/0000001,0000002"
+df_idx = fetch_bok_api(url_idx)
+if not df_idx.empty:
+    df_idx = df_idx[["ITEM_NAME1", "DATA_VALUE"]]
+    df_idx.columns = ["지수", "종가"]
+    st.table(df_idx)
 
-    if st.button("📥 관심 종목 등록"):
-        payload = {
-            "stock_name": selected["Name"],
-            "ticker_code": selected["Code"]  # yahooquery가 자동 처리
-        }
-        res = requests.post(f"{FASTAPI_URL}/add-favorite", json=payload)
-        if res.status_code == 200:
-            st.success(f"{selected['Name']} 등록 완료 ✅")
-        else:
-            st.error("등록 실패 😢")
-else:
-    st.info("검색 결과가 없습니다.")
-
-st.divider()
-st.subheader("✅ 관심 종목 목록")
-
-# 관심 종목 조회 + 주가 표시
-try:
-    favorites = requests.get(f"{FASTAPI_URL}/get-favorites").json()
-    if favorites:
-        selected_stock = st.selectbox("📌 선택 종목", [f"{f['stock_name']} ({f['ticker_code']})" for f in favorites])
-        selected_ticker = next(f["ticker_code"] for f in favorites if f["stock_name"] in selected_stock)
-
-        # yahooquery로 주가 조회
-        ticker = Ticker(selected_ticker)
-        st.markdown(f"### 📊 {selected_stock} 주가 정보")
-        df = ticker.history(start=date.today() - timedelta(days=30), end=date.today())
-        st.line_chart(df["close"])
-
-        info = ticker.summary_detail.get(selected_ticker, {})
-        st.write(f"📈 현재가: {info.get('regularMarketPrice', 'N/A')}원")
-        st.write(f"💰 시가총액: {info.get('marketCap', 'N/A')}")
-        st.write(f"📊 배당 수익률: {round(info.get('dividendYield', 0) * 100, 2)}%")
-    else:
-        st.info("등록된 관심 종목이 없습니다.")
-except Exception as e:
-    st.error(f"📡 서버 오류 또는 데이터 조회 실패: {e}")
+# 국고채 금리 (통계코드: 722Y001)
+st.subheader("💵 국고채 금리")
+bond_codes = {
+    "국고채 1년": "0101001",
+    "국고채 3년": "0101003",
+    "국고채 5년": "0101005",
+    "국고채 10년": "0101010",
+}
+bond_items = ",".join(bond_codes.values())
+url_bond = f"{base_url}/StatisticSearch/{API_KEY}/json/kr/1/10/722Y001/D/{today}/{today}/{bond_items}"
+df_bond = fetch_bok_api(url_bond)
+if not df_bond.empty:
+    df_bond["만기"] = df_bond["ITEM_NAME1"].map({v: k for k, v in bond_codes.items()})
+    df_bond = df_bond[["만기", "DATA_VALUE"]]
+    df_bond.columns = ["만기", "금리 (%)"]
+    st.table(df_bond)
