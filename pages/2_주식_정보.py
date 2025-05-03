@@ -1,85 +1,99 @@
 import streamlit as st
-from datetime import date, timedelta
-import pandas as pd
 import FinanceDataReader as fdr
+import pandas as pd
 from yahooquery import Ticker
-from utils.favorite_api import add_favorite_to_db, get_favorite_stocks
+from datetime import date, timedelta
+import requests
+from bs4 import BeautifulSoup
 
-st.set_page_config(page_title="📈 주식 정보", layout="wide")
-st.title("📈 주식 정보 대시보드")
+st.set_page_config(page_title="📈 주식 및 금리 정보", layout="wide")
+st.title("📈 한국 주식 + 미국/한국 국채 금리 대시보드")
 
-# 종목 목록 불러오기 (한국 종목만 우선)
+# -------------------- 한국 종목 목록 --------------------
 @st.cache_data(ttl=86400)
 def load_korea_stock_list():
     df = fdr.StockListing('KRX')
-    df = df[['Name', 'Code']]  # 🔁 Symbol → Code
+    df = df[['Name', 'Code']]
     df['Display'] = df['Name'] + " (" + df['Code'] + ")"
     return df
 
 krx_df = load_korea_stock_list()
 symbols = krx_df['Display'].tolist()
-symbols.insert(0, "직접 입력 (미국 종목 등)")
+selected = st.selectbox("📌 한국 종목 선택", options=symbols)
+manual_symbol = krx_df[krx_df["Display"] == selected]["Code"].values[0]
 
-# 종목 선택
-selected = st.selectbox("📌 관심 종목 선택 (또는 직접 입력)", options=symbols)
-if selected == "직접 입력 (미국 종목 등)":
-    manual_symbol = st.text_input("미국 종목 코드를 직접 입력 (예: AAPL, TSLA 등)", "")
-else:
-    manual_symbol = krx_df[krx_df["Display"] == selected]["Code"].values[0]
-
-# 날짜 입력
+# -------------------- 날짜 입력 --------------------
 col1, col2 = st.columns(2)
 with col1:
     start_date = st.date_input("조회 시작일", value=date.today() - timedelta(days=30))
 with col2:
     end_date = st.date_input("조회 종료일", value=date.today())
 
-# 캐시된 조회 함수
+# -------------------- 한국 주식 조회 --------------------
 @st.cache_data(ttl=3600)
-def get_stock_data(symbol, start, end):
-    if symbol.isdigit():  # 한국 종목
-        df = fdr.DataReader(symbol, start, end)
-        info = f"{symbol} (Korean Stock)"
-    else:
-        stock = Ticker(symbol)
-        info = stock.summary_detail.get(symbol, {}).get("longName", "정보 없음")
-        df = stock.history(start=start, end=end)
-        df = df[df.index.get_level_values(0) == symbol]
-        df = df.reset_index().set_index("date")
-    return info, df
+def get_korean_stock_data(code, start, end):
+    df = fdr.DataReader(code, start, end)
+    return df
 
-# 버튼 클릭 시 조회
-if st.button("📊 조회하기") and manual_symbol:
+if st.button("📊 한국 종목 조회"):
     try:
-        info, hist = get_stock_data(manual_symbol, start_date, end_date)
-        st.subheader(f"🔎 선택된 종목: {info}")
-        st.line_chart(hist["close"] if "close" in hist else hist["Close"])
+        hist = get_korean_stock_data(manual_symbol, start_date, end_date)
+        st.subheader(f"📈 {selected} 주가 차트")
+        st.line_chart(hist["Close"])
         st.dataframe(hist.tail(5))
-
-        # 종목 즐겨찾기 버튼 추가
-        if "Korean Stock" in info:
-            stock_name = selected.split(" (")[0]
-            ticker_code = manual_symbol
-        else:
-            stock_name = info
-            ticker_code = manual_symbol.upper()
-
-        if st.button("⭐ 관심 종목으로 등록"):
-            status, result = add_favorite_to_db(stock_name, ticker_code)
-            if status == 200:
-                st.success("✅ 관심 종목으로 등록 완료!")
-            else:
-                st.error(f"등록 실패: {result}")
-
     except Exception as e:
-        st.error(f"❌ 데이터 조회 중 오류 발생: {e}")
+        st.error(f"❌ 오류 발생: {e}")
 
-# 관심 종목 목록 표시
+# -------------------- 미국 국채 금리 --------------------
 st.divider()
-st.subheader("⭐ 등록된 관심 종목")
-status, favorites = get_favorite_stocks()
-if status == 200 and favorites:
-    df = pd.DataFrame(favorites)
-    st.dataframe(df)
-else:
-    st.info("아직 등록된 관심 종목이 없습니다.")
+st.subheader("💵 미국 국채 금리")
+
+bond_options = {
+    "미국 10년물 (^TNX)": "^TNX",
+    "미국 30년물 (^TYX)": "^TYX"
+}
+selected_bond = st.selectbox("미국채 선택", list(bond_options.keys()))
+
+@st.cache_data(ttl=3600)
+def get_bond_data(symbol, start, end):
+    t = Ticker(symbol)
+    df = t.history(start=start, end=end)
+    df = df[df.index.get_level_values(0) == symbol]
+    df = df.reset_index().set_index("date")
+    return df
+
+if st.button("📈 미국채 금리 조회"):
+    try:
+        symbol = bond_options[selected_bond]
+        df = get_bond_data(symbol, start_date, end_date)
+        st.line_chart(df["close"])
+        st.dataframe(df.tail(5))
+    except Exception as e:
+        st.error(f"❌ 미국채 데이터 조회 실패: {e}")
+
+# -------------------- 한국 국채 금리 --------------------
+st.divider()
+st.subheader("📊 한국 국채 금리 (실시간)")
+
+@st.cache_data(ttl=600)
+def get_korean_bond_rates():
+    url = "https://www.kofiabond.or.kr/proframeWeb/jsp/BDIDX/BDIDX1001.jsp"
+    res = requests.get(url)
+    soup = BeautifulSoup(res.text, "html.parser")
+    table = soup.find("table", {"class": "table_style01 type02"})
+    data = []
+    if table:
+        rows = table.find_all("tr")
+        for row in rows[1:]:
+            cols = row.find_all("td")
+            if len(cols) >= 5:
+                term = cols[0].text.strip()
+                rate = cols[4].text.strip()
+                data.append((term, rate))
+    return pd.DataFrame(data, columns=["만기", "금리(%)"])
+
+try:
+    bond_df = get_korean_bond_rates()
+    st.table(bond_df[bond_df["만기"].isin(["1년", "5년", "10년", "20년", "30년"])])
+except Exception as e:
+    st.error(f"❌ 한국 국채 금리 조회 실패: {e}")
