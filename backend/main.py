@@ -2,6 +2,7 @@ from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
 from db import get_db_version
 from routes.stock_router import router as stock_router
+from routes.kakao_router import router as kakao_router
 
 app = FastAPI()
 
@@ -17,3 +18,4 @@ def db_check():
     return {"db_version": version}
 
 app.include_router(stock_router)
+app.include_router(kakao_router)
