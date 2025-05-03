@@ -7,3 +7,4 @@ schedule
 beautifulsoup4
 yahooquery
 finance-datareader
+FinanceDataReader
