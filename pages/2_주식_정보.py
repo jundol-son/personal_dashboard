@@ -12,8 +12,8 @@ st.title("📈 주식 정보 대시보드")
 @st.cache_data(ttl=86400)
 def load_korea_stock_list():
     df = fdr.StockListing('KRX')
-    df = df[['Name', 'Symbol']]
-    df['Display'] = df['Name'] + " (" + df['Symbol'] + ")"
+    df = df[['Name', 'Code']]  # 🔁 Symbol → Code
+    df['Display'] = df['Name'] + " (" + df['Code'] + ")"
     return df
 
 krx_df = load_korea_stock_list()
@@ -25,7 +25,7 @@ selected = st.selectbox("📌 관심 종목 선택 (또는 직접 입력)", opti
 if selected == "직접 입력 (미국 종목 등)":
     manual_symbol = st.text_input("미국 종목 코드를 직접 입력 (예: AAPL, TSLA 등)", "")
 else:
-    manual_symbol = krx_df[krx_df["Display"] == selected]["Symbol"].values[0]
+    manual_symbol = krx_df[krx_df["Display"] == selected]["Code"].values[0]
 
 # 날짜 입력
 col1, col2 = st.columns(2)
