@@ -18,10 +18,10 @@ else:
             "object_type": "text",
             "text": msg,
             "link": {
-                "web_url": "https://developers.kakao.com",
-                "mobile_web_url": "https://developers.kakao.com"
+                "web_url": "https://streamlit-dashboard-wlrq.onrender.com/카카오톡_전송",
+                "mobile_web_url": "https://streamlit-dashboard-wlrq.onrender.com/카카오톡_전송"
             },
-            "button_title": "카카오 개발자"
+            "button_title": "📊 대시보드 열기"
         }
         res = requests.post(url, headers=headers, data={"template_object": json.dumps(data)})
         if res.status_code == 200:
