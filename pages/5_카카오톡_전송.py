@@ -1,7 +1,7 @@
 import streamlit as st
 import requests
 import json
-from backend.kakao_auth import load_access_token
+from backend.services.kakao_auth import load_access_token
 
 st.set_page_config(page_title="카카오톡 메시지", layout="centered")
 st.title("📨 카카오톡 나에게 메시지 보내기")
