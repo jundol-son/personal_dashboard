@@ -7,4 +7,4 @@ schedule
 beautifulsoup4
 yahooquery
 finance-datareader
-psycopg2
+psycopg2-binary
