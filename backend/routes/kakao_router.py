@@ -1,6 +1,6 @@
 from fastapi import APIRouter
 import requests
-from backend.kakao_auth import save_tokens
+from services.kakao_auth import save_tokens
 
 CLIENT_ID = "48f8318d48bafe040f2d9605f68bf6bb"
 REDIRECT_URI = "https://fastapi-backend-io09.onrender.com/callback"
