@@ -11,18 +11,21 @@ if not access_token:
     st.warning("❗ Access Token이 없습니다. FastAPI /callback을 통해 로그인해 주세요.")
 else:
     msg = st.text_area("보낼 메시지", "안녕하세요, 자동화 테스트입니다!")
+
+    # 링크 포함 안내 문구 추가
+    streamlit_url = "https://streamlit-dashboard-wlrq.onrender.com/카카오톡_전송"
+
     if st.button("📤 보내기"):
         url = "https://kapi.kakao.com/v2/api/talk/memo/default/send"
         headers = {"Authorization": f"Bearer {access_token}"}
+
+        full_msg = f"{msg}\n\n📎 대시보드 바로가기:\n{streamlit_url}"
+
         data = {
             "object_type": "text",
-            "text": msg,
-            "link": {
-                "web_url": "https://streamlit-dashboard-wlrq.onrender.com/카카오톡_전송",
-                "mobile_web_url": "https://streamlit-dashboard-wlrq.onrender.com/카카오톡_전송"
-            },
-            "button_title": "📊 대시보드 열기"
+            "text": full_msg
         }
+
         res = requests.post(url, headers=headers, data={"template_object": json.dumps(data)})
         if res.status_code == 200:
             st.success("✅ 전송 성공")
