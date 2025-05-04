@@ -8,3 +8,4 @@ beautifulsoup4
 yahooquery
 finance-datareader
 psycopg2-binary
+sqlalchemy
