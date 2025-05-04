@@ -12,28 +12,31 @@ if not access_token:
 else:
     msg = st.text_area("보낼 메시지", "안녕하세요, 자동화 테스트입니다!")
 
-    # 링크 포함 안내 문구 추가
-    streamlit_url = "https://streamlit-dashboard-wlrq.onrender.com/카카오톡_전송"
+    streamlit_url = "https://streamlit-dashboard-wlrq.onrender.com"
 
     if st.button("📤 보내기"):
         url = "https://kapi.kakao.com/v2/api/talk/memo/default/send"
         headers = {
             "Authorization": f"Bearer {access_token}",
-            "Content-Type": "application/x-www-form-urlencoded"  # 👈 명확히 지정!
+            "Content-Type": "application/x-www-form-urlencoded"
         }
 
-        full_msg = f"{msg}\n\n📎 대시보드 바로가기:\n{streamlit_url}"
-
+        # ✅ 카카오 템플릿 구조 정확히 맞추기
         data = {
             "object_type": "text",
-            "text": full_msg
+            "text": msg,
+            "link": {
+                "web_url": streamlit_url,
+                "mobile_web_url": streamlit_url
+            },
+            "button_title": "📊 대시보드 열기"
         }
 
         payload = {
-            "template_object": json.dumps(data, ensure_ascii=False)  # 👈 한글 깨짐 방지
+            "template_object": json.dumps(data, ensure_ascii=False)
         }
 
-        res = requests.post(url, headers=headers, data=payload)  # 👈 payload는 data로 전송
+        res = requests.post(url, headers=headers, data=payload)
 
         if res.status_code == 200:
             st.success("✅ 전송 성공")
