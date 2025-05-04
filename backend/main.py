@@ -5,7 +5,7 @@ from routes.kakao_router import router as kakao_router
 from db import get_db_version
 import requests
 import os
-from backend.services.kakao_auth import save_tokens  # access_token 저장용 함수
+from services.kakao_auth import save_tokens  # access_token 저장용 함수
 
 app = FastAPI()
 
