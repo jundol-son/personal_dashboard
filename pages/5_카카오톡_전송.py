@@ -17,7 +17,10 @@ else:
 
     if st.button("📤 보내기"):
         url = "https://kapi.kakao.com/v2/api/talk/memo/default/send"
-        headers = {"Authorization": f"Bearer {access_token}"}
+        headers = {
+            "Authorization": f"Bearer {access_token}",
+            "Content-Type": "application/x-www-form-urlencoded"  # 👈 명확히 지정!
+        }
 
         full_msg = f"{msg}\n\n📎 대시보드 바로가기:\n{streamlit_url}"
 
@@ -26,8 +29,13 @@ else:
             "text": full_msg
         }
 
-        res = requests.post(url, headers=headers, data={"template_object": json.dumps(data)})
+        payload = {
+            "template_object": json.dumps(data, ensure_ascii=False)  # 👈 한글 깨짐 방지
+        }
+
+        res = requests.post(url, headers=headers, data=payload)  # 👈 payload는 data로 전송
+
         if res.status_code == 200:
             st.success("✅ 전송 성공")
         else:
-            st.error(f"❌ 실패: {res.text}")
+            st.error(f"❌ 실패: {res.status_code} - {res.text}")
